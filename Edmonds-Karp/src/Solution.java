@@ -37,7 +37,7 @@ public class Solution {
         maximo flujo: int
     */
 
-    private int FordFulkerson(g: Pair<List<Nodo>,List<Arco>>, s: Nodo, t: Nodo, int c){
+    //private int FordFulkerson(g: Pair<List<Nodo>,List<Arco>>, s: Nodo, t: Nodo, int c){
 
 
         /*
@@ -56,6 +56,6 @@ public class Solution {
         */
 
 
-        return 1;
-    }
+        //return 1;
+    //}
 }
