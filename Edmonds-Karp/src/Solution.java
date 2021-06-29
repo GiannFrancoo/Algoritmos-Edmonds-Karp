@@ -1,198 +1,89 @@
-import kotlin.time.MeasureTimeKt;
-
-import java.io.*;
 import java.util.*;
-
-import java.lang.*;
-import java.util.LinkedList;
 
 public class Solution {
 
-    static int V = 4;
+    private static int cantNodos;
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int cantArcos, s, t, u, v;
+        cantNodos = scanner.nextInt();
+        cantArcos = scanner.nextInt();
+        s = scanner.nextInt()-1;
+        t = scanner.nextInt()-1;
 
-        int graph[][] = new int[][] {
-                { 0, 16, 13, 0, 0, 0 },
-                { 0, 0, 10, 12, 0, 0 },
-                { 0, 4, 0, 0, 14, 0 },
-                { 0, 0, 9, 0, 0, 20 },
-                { 0, 0, 0, 7, 0, 4 },
-                { 0, 0, 0, 0, 0, 0 }
-        }; //Return 23
+        int grafo[][] = new int[cantNodos][cantNodos];
 
-        V = 6;
-        long ini = System.nanoTime();
-        System.out.println("Max flow POLL + CHECK" + fordFulkersonDeque(graph, 0, 5));
-        long fin = System.nanoTime();
-        System.out.println("Tiempo: " + (fin - ini));
+        for(int i = 0; i < cantArcos; i++){
+            u = scanner.nextInt()-1;
+            v = scanner.nextInt()-1;
+            grafo[u][v] = scanner.nextInt();
+        }
 
-        ini = System.nanoTime();
-        System.out.println("Max flow POLL" + fordFulkerson(graph, 0, 5));
-        fin = System.nanoTime();
-        System.out.println("Tiempo: " + (fin - ini));
-
-
-        /*
-        int graph1[][] = new int[][] {
-                {0,3,0,0},
-                {0,5,4,0},
-                {2,0,0,3},
-                {0,0,3,0},
-        }; //Return 3
-
-        V = 4;
-        long ini1 = System.nanoTime();
-        System.out.println("Max flow " + fordFulkerson(graph1, 0, 3));
-        long fin1 = System.nanoTime();
-        System.out.println("Tiempo: " + (fin1 - ini1));
-        */
+        System.out.println(edmonds_karp(grafo, s, t));
     }
 
-    public static boolean bfsDeque(int rGraph[][], int s, int t, int parent[]){
+    public static boolean bfs(int grafoResidual[][], int s, int t, int padre[]){
+        boolean visitado[] = new boolean[cantNodos];
+        for (int i = 0; i < cantNodos; ++i)
+            visitado[i] = false;
 
-        boolean visited[] = new boolean[V];
-        for (int i = 0; i < V; ++i)
-            visited[i] = false;
+        Queue<Integer> cola = new ArrayDeque<Integer>();
+        cola.add(s);
+        visitado[s] = true;
+        padre[s] = -1;
 
-        Queue<Integer> queue = new ArrayDeque<Integer>();
-        queue.add(s);
-        visited[s] = true;
-        parent[s] = -1;
+        while (!cola.isEmpty()) {
 
-        // Standard BFS Loop
-        while (!queue.isEmpty()) {
+            int u = cola.poll();
 
-            int u = queue.poll();
-
-            for (int v = 0; v < V; v++) {
-                if (!visited[v] && rGraph[u][v] > 0) {
+            for (int v = 0; v < cantNodos; v++) {
+                if (!visitado[v] && grafoResidual[u][v] > 0) {
                     if (v == t) {
-                        parent[v] = u;
+                        padre[v] = u;
                         return true;
                     }
-                    queue.add(v);
-                    parent[v] = u;
-                    visited[v] = true;
+                    cola.add(v);
+                    padre[v] = u;
+                    visitado[v] = true;
                 }
             }
         }
-
         return false;
     }
 
-    public static int fordFulkersonDeque(int graph[][], int s, int t){
+    public static int edmonds_karp(int grafo[][], int s, int t){
         int u, v;
 
-        int rGraph[][] = new int[V][V];
+        int grafoResidual[][] = new int[cantNodos][cantNodos];
 
-        for (u = 0; u < V; u++)
-            for (v = 0; v < V; v++)
-                rGraph[u][v] = graph[u][v];
+        for (u = 0; u < cantNodos; u++)
+            for (v = 0; v < cantNodos; v++)
+                grafoResidual[u][v] = grafo[u][v];
 
-        int parent[] = new int[V];
+        int padre[] = new int[cantNodos];
 
-        int max_flow = 0;
+        int flujoMaximo = 0;
 
-        while (bfsDeque(rGraph, s, t, parent)) {
-            int path_flow = Integer.MAX_VALUE;
+        while (bfs(grafoResidual, s, t, padre)) {
 
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                path_flow = Math.min(path_flow, rGraph[u][v]);
+            int caminoMenorFlujo = Integer.MAX_VALUE;
+            for (v = t; v != s; v = padre[v]) {
+                u = padre[v];
+                caminoMenorFlujo = Math.min(caminoMenorFlujo, grafoResidual[u][v]);
             }
 
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                rGraph[v][u] += path_flow;
-                rGraph[u][v] -= path_flow;
+            for (v = t; v != s; v = padre[v]) {
+                u = padre[v];
+                grafoResidual[u][v] -= caminoMenorFlujo;
+                grafoResidual[v][u] += caminoMenorFlujo;
             }
 
-            max_flow += path_flow;
+            flujoMaximo += caminoMenorFlujo;
         }
 
-        return max_flow;
+        return flujoMaximo;
     }
-
-
-    public static boolean bfs(int rGraph[][], int s, int t, int parent[]){
-        boolean visited[] = new boolean[V];
-        for (int i = 0; i < V; ++i)
-            visited[i] = false;
-
-        Queue<Integer> queue = new ArrayDeque<Integer>();
-        queue.add(s);
-        visited[s] = true;
-        parent[s] = -1;
-
-        // Standard BFS Loop
-        while (!queue.isEmpty()) {
-
-            int u = queue.poll();
-
-            for (int v = 0; v < V; v++) {
-                if (!visited[v] && rGraph[u][v] > 0) {
-                    if (v == t) {
-                        parent[v] = u;
-                        return true;
-                    }
-                    queue.add(v);
-                    parent[v] = u;
-                    visited[v] = true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    public static int fordFulkerson(int graph[][], int s, int t){
-        int u, v;
-
-        int rGraph[][] = new int[V][V];
-
-        for (u = 0; u < V; u++)
-            for (v = 0; v < V; v++)
-                rGraph[u][v] = graph[u][v];
-
-        // This array is filled by BFS and to store path
-        int parent[] = new int[V];
-
-        int max_flow = 0; // There is no flow initially
-
-        // Augment the flow while tere is path from source
-        // to sink
-        while (bfs(rGraph, s, t, parent)) {
-            // Find minimum residual capacity of the edhes
-            // along the path filled by BFS. Or we can say
-            // find the maximum flow through the path found.
-            int path_flow = Integer.MAX_VALUE;
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                path_flow
-                        = Math.min(path_flow, rGraph[u][v]);
-            }
-
-            // update residual capacities of the edges and
-            // reverse edges along the path
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                rGraph[u][v] -= path_flow;
-                rGraph[v][u] += path_flow;
-            }
-
-            // Add path flow to overall flow
-            max_flow += path_flow;
-        }
-
-        // Return the overall flow
-        return max_flow;
-    }
-
-
-
-
-
 }
 
 
