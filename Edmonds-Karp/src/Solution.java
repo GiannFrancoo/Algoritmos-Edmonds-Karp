@@ -65,16 +65,30 @@ public class Solution {
             int maximoFlujo = 0;
             int minimoFlujoCamino = 0;
 
-            do {
-                minimoFlujoCamino = bfs();
-                maximoFlujo += minimoFlujoCamino;
+            int minimoFlujo = Integer.MAX_VALUE;
+
+            Arco[] camino = new Arco[cantNodos]; //Luego se crea en bfs
+
+            while(bfs(camino)){
+                //recuperar el minimoFlujo del camino
+                minimoFlujo = Integer.MAX_VALUE;
+                for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
+                    minimoFlujo = Math.min(minimoFlujo, arco.capacidadDisponible());
+                }
+
+                //incrementrar / decrementar el arco
+                for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
+                    arco.flujoActual = arco.flujoActual + minimoFlujo;
+                    arco.residuo.flujoActual = arco.residuo.flujoActual - minimoFlujo;
+                }
+
+                maximoFlujo += minimoFlujo;
             }
-            while(minimoFlujoCamino != 0);
 
             return maximoFlujo;
         }
 
-        public int bfs(){
+        public boolean bfs(Arco[] camino){
 
             //Inicializa todos false;
             boolean[] visitados = new boolean[cantNodos];
@@ -84,12 +98,12 @@ public class Solution {
             cola.add(s);
 
             //Construir el camino hacia el nodo "t"
-            Arco[] camino = new Arco[cantNodos];
+            //camino = new Arco[cantNodos];
             while(!cola.isEmpty()){
                 int nodo = cola.poll();
 
                 if (nodo == t) {
-                    break;
+                    return true;
                 }
 
                 for(Arco arco : grafo[nodo]){
@@ -97,7 +111,7 @@ public class Solution {
 
                         if(arco.destino == t){
                             camino[arco.destino] = arco;
-                            break;
+                            return true;
                         }
 
                         cola.add(arco.destino);
@@ -107,23 +121,8 @@ public class Solution {
                 }
             }
 
-            //Si se pudo llegar al nodo t
-            if (camino[t] == null)
-                return 0;
-
-            //recuperar el minimoFlujo del camino
-            int minimoFlujo = Integer.MAX_VALUE;
-            for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
-                minimoFlujo = Math.min(minimoFlujo, arco.capacidadDisponible());
-            }
-
-            //incrementrar / decrementar el arco
-            for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
-                arco.flujoActual = arco.flujoActual + minimoFlujo;
-                arco.residuo.flujoActual = arco.residuo.flujoActual - minimoFlujo;
-            }
-
-            return minimoFlujo;
+            //Debido a que no llego al nodo "t"
+            return false;
         }
 
         public void agregarArco(int origen, int destino, int capacidad){
