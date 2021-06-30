@@ -1,3 +1,4 @@
+import java.io.*;
 import java.util.*;
 
 public class Solution {
@@ -6,101 +7,135 @@ public class Solution {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        int cantArcos, s, t, u, v;
+        int cantArcos, s, t, u, v, c;
         cantNodos = scanner.nextInt();
         cantArcos = scanner.nextInt();
         s = scanner.nextInt()-1;
         t = scanner.nextInt()-1;
 
-        int grafo[][] = new int[cantNodos][cantNodos];
+
+        List<Arco>[] grafo = new LinkedList[cantNodos];
+        for(int i = 0; i < cantNodos; i++){
+            grafo[i] = new LinkedList();
+        }
+
+        Edmonds_Karp ekps = new Edmonds_Karp(grafo, s, t);
 
         for(int i = 0; i < cantArcos; i++){
             u = scanner.nextInt()-1;
             v = scanner.nextInt()-1;
-            grafo[u][v] = scanner.nextInt();
+            c = scanner.nextInt();
+            ekps.agregarArco(u, v, c);
         }
 
-        System.out.println(edmonds_karp(grafo, s, t));
+        System.out.println(ekps.maximoFlujo());
     }
 
-    public static boolean bfs(int grafoResidual[][], int s, int t, int padre[]){
-        boolean visitado[] = new boolean[cantNodos];
-        for (int i = 0; i < cantNodos; ++i)
-            visitado[i] = false;
+    private static class Arco {
+        protected int origen;
+        protected int destino;
+        protected int flujoActual;
+        protected int capacidad;
+        protected Arco residuo;
 
-        Queue<Integer> cola = new ArrayDeque<Integer>();
-        cola.add(s);
-        visitado[s] = true;
-        padre[s] = -1;
+        public Arco(int origen, int destino, int capacidad){
+            this.origen = origen;
+            this.destino = destino;
+            this.capacidad = capacidad;
+        }
 
-        while (!cola.isEmpty()) {
+        public int capacidadDisponible(){
+            return capacidad - flujoActual;
+        }
+    }
 
-            int u = cola.poll();
+    private static class Edmonds_Karp {
 
-            for (int v = 0; v < cantNodos; v++) {
-                if (!visitado[v] && grafoResidual[u][v] > 0) {
-                    if (v == t) {
-                        padre[v] = u;
-                        return true;
+        protected List<Arco>[] grafo;
+        protected int s;
+        protected int t;
+
+        public Edmonds_Karp(List<Arco>[] grafo, int s, int t){
+            this.grafo = grafo;
+            this.s = s;
+            this.t = t;
+        }
+
+        public int maximoFlujo(){
+            int maximoFlujo = 0;
+            int minimoFlujoCamino = 0;
+
+            do {
+                minimoFlujoCamino = bfs();
+                maximoFlujo += minimoFlujoCamino;
+            }
+            while(minimoFlujoCamino != 0);
+
+            return maximoFlujo;
+        }
+
+        public int bfs(){
+
+            //Inicializa todos false;
+            boolean[] visitados = new boolean[cantNodos];
+
+            Queue<Integer> cola = new ArrayDeque();
+            visitados[s] = true;
+            cola.add(s);
+
+            //Construir el camino hacia el nodo "t"
+            Arco[] camino = new Arco[cantNodos];
+            while(!cola.isEmpty()){
+                int nodo = cola.poll();
+
+                if (nodo == t) {
+                    break;
+                }
+
+                for(Arco arco : grafo[nodo]){
+                    if(!visitados[arco.destino] && arco.capacidadDisponible() > 0){
+
+                        if(arco.destino == t){
+                            camino[arco.destino] = arco;
+                            break;
+                        }
+
+                        cola.add(arco.destino);
+                        camino[arco.destino] = arco;
+                        visitados[arco.destino] = true;
                     }
-                    cola.add(v);
-                    padre[v] = u;
-                    visitado[v] = true;
                 }
             }
-        }
-        return false;
-    }
 
-    public static int edmonds_karp(int grafo[][], int s, int t){
-        int u, v;
+            //Si se pudo llegar al nodo t
+            if (camino[t] == null)
+                return 0;
 
-        int grafoResidual[][] = new int[cantNodos][cantNodos];
-
-        for (u = 0; u < cantNodos; u++)
-            for (v = 0; v < cantNodos; v++)
-                grafoResidual[u][v] = grafo[u][v];
-
-        int padre[] = new int[cantNodos];
-
-        int flujoMaximo = 0;
-
-        while (bfs(grafoResidual, s, t, padre)) {
-
-            int caminoMenorFlujo = Integer.MAX_VALUE;
-            for (v = t; v != s; v = padre[v]) {
-                u = padre[v];
-                caminoMenorFlujo = Math.min(caminoMenorFlujo, grafoResidual[u][v]);
+            //recuperar el minimoFlujo del camino
+            int minimoFlujo = Integer.MAX_VALUE;
+            for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
+                minimoFlujo = Math.min(minimoFlujo, arco.capacidadDisponible());
             }
 
-            for (v = t; v != s; v = padre[v]) {
-                u = padre[v];
-                grafoResidual[u][v] -= caminoMenorFlujo;
-                grafoResidual[v][u] += caminoMenorFlujo;
+            //incrementrar / decrementar el arco
+            for(Arco arco = camino[t]; arco != null; arco = camino[arco.origen]){
+                arco.flujoActual = arco.flujoActual + minimoFlujo;
+                arco.residuo.flujoActual = arco.residuo.flujoActual - minimoFlujo;
             }
 
-            flujoMaximo += caminoMenorFlujo;
+            return minimoFlujo;
         }
 
-        return flujoMaximo;
+        public void agregarArco(int origen, int destino, int capacidad){
+            Arco a = new Arco(origen, destino, capacidad);
+            Arco b = new Arco(destino, origen, 0);
+            a.residuo = b;
+            b.residuo = a;
+            grafo[origen].add(a);
+            grafo[destino].add(b);
+        }
+
+
     }
+
 }
-
-
- /*
-    PROCEDURE FordFulkerson (G,s,t,c)
-        FOR cada arco (u,v) en A
-            f[u,v]::=0; f[v,u]::=0
-        ENDFOR
-
-        WHILE existe un camino de aumento p en Gf
-            cf(p)::= capacidad mínima de p
-            FOR cada arco (u,v) en p
-                f[u,v]::=f[u,v]+cf(p)
-                f[v,u]::=-f[u,v]
-            ENDFOR
-        ENDWHILE;
-
-       RETURN f
-    */
-
